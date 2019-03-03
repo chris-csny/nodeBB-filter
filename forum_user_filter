@@ -1,0 +1,156 @@
+// ==UserScript==
+// @name Forum_User_Filter
+// @namespace http://csny.xyz/
+// @match https://forums.azcwr.org/recent
+// @match https://forums.azcwr.org/unread
+// @grant none
+// ==/UserScript==
+// This script takes a list of users and removes their posts from view 
+
+window.addEventListener("load", function() { 
+  //Add users to filter here
+  var userList = [
+    "rubyrose",
+    "some name" //add a comma after that questionmark before you add more names
+  ]
+  
+  //This is a bit overkill, but I may use this for other pages besides 
+  //the "recent" page. This array makes it so I'm not hardcoding html stuff
+  //inside the fuctions
+  var elements = {
+    //Info pertaining to a relevant element. In this case, the items in a topics list
+    "relevantClass" : "category-item",
+    "relenventTag" : "li",
+    "expandedRelevantClass" : "class='row clearfix category-item'",
+    "relevantParentClass" : "topic-list",
+    "buttonClass" : "btn btn-primary",       //the class used to match the button style
+    "buttonPlace" : "navbar-header"           //the ID or class[0] where to place the button
+  }
+  
+  //return a node list
+  //return a node list with one element if nodelist is empty
+  function getItemNodeList(){
+    itemNodeList = document.getElementsByClassName(elements["relevantClass"])
+    if (itemNodeList == null) {
+      console.log("adding an element so this script doesn't break");
+      var emptyNode = document.createElement(elements["relevantTag"]);
+      emptyNode.className = elements["expandedRelevantClass"];
+      emptyNode.innerHTML = "There's nothing here";
+      document.getElementByClassName(elements["relevantParentClass"])[0].appendChild(emptyNode);
+      itemNodeList[0] = emptyNode;
+    }
+    return itemNodeList;
+  }
+  
+  //Given a nodelist, return an array with 
+  //array["num"] = number of posts in the nodelist
+  //array["str"] = the string equivalent HTML of the nodelist
+  function backupHTML(nodeList){
+    return {
+      "num" : nodeList.length,
+      "str" : nodeList[0].parentNode.innerHTML,
+      "url" : window.location.href
+    };
+  }
+  
+  //Arguments
+  //id = name of id to assign to new button, or a button object (node?) to make 
+  //changes to This function cannot change the id but can change the class name.
+  //className = Class name of button to be set or changed.
+  //html = The text to show on the button
+  function buildButton(id, className, html){
+    if (typeof id == "string" ) {
+      var button = document.createElement("button");
+      button.id = id;
+      button.className = className;
+      button.innerHTML = html;
+    } else {
+       var button = id;
+       button.className = className;
+       button.innerHTML = html;
+    }
+    return button;
+  }
+  
+  //Place a button on the page
+  //button - a button element
+  //toPlace - The ID of the element where to place the button,  
+  //or the first element with a matching className is used if
+  //the given placeID does not exist as an id on the page 
+  function addButton(button, toPlace) {
+    var element = document.getElementById(toPlace);
+    if(element == null) {
+      element = document.getElementsByClassName(toPlace)[0];
+      if(elements == null) {
+        console.log("identity not found - adding button to <body>");
+        element = document.getElementByTagName("body");
+      }
+    }
+    element.appendChild(button);
+    return document.getElementById(button.id);
+  }
+  
+  //html - string of html
+  //button - a button element
+  //userList - the userList defined at the beginning
+  //restores the page by writing the html to the relevantParentClass
+  function restorePage(button, html) {
+    document.getElementsByClassName(elements["relevantParentClass"])[0].innerHTML = html;
+    buildButton(button, elements["buttonClass"], "Filter");
+    return false;
+  }
+  
+  //button - the button that does the things
+  //nodelist - the nodelist to be modified
+  //userList - the userList defined at the beginning
+  //filters the page by modifying the nodelist and changes the button text
+  function filterPosts(button, nodeList, userList, backup) {
+    var origNumOfPosts = backup["num"]
+    var postsRemaining = origNumOfPosts;
+    var qtyHidden = 0;
+    //Check each post
+    for (var p = 0; p < postsRemaining; p++) {
+      //Check for each user
+      for (var u = 0; u < userList.length; u++) { 	 
+        var nodeToCheck = nodeList[p];
+        //If username is found decrement number of posts, decrement p 
+        //to repeat this nodelist index, and change u to jump over the
+        //other users. 
+        if (nodeToCheck.innerHTML.search(userList[u]) > -1) {
+          qtyHidden++;
+          nodeToCheck.parentNode.removeChild(nodeToCheck);
+          postsRemaining--;
+          p--;
+          u = userList.length;
+        }
+      }
+    }
+    //change the button to un-filter on next click.
+    buttonText = qtyHidden + "/" + origNumOfPosts + " filtered";
+    buildButton(button, elements["buttonClass"], buttonText);
+    return true;
+  }
+  //get a list of posts on the page
+  var itemNodeList = getItemNodeList();
+  //make a backup of the posts before filtering starts
+  var originalHTML = backupHTML(itemNodeList);
+  //Add the button
+  var filterButton = buildButton("filterButton", elements["buttonClass"], "Filter");
+  var placedButton = addButton(filterButton, elements["buttonPlace"]);
+  
+  //filter or unfilter on click
+  var filtered = false;
+  placedButton.addEventListener("click", function _listener() {
+  if (filtered){
+    //unfilter
+    if (originalHTML["url"] == window.location.href){
+      filtered = restorePage(placedButton, originalHTML["str"]); //returns false
+    }
+    itemNodeList = getItemNodeList();
+    originalHTML = backupHTML(itemNodeList);
+  } else {
+    //filter
+    filtered = filterPosts(placedButton, itemNodeList, userList, originalHTML);
+  }
+  });
+});
