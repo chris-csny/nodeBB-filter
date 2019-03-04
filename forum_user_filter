@@ -1,26 +1,10 @@
 // ==UserScript==
 // @name Forum_User_Filter
 // @namespace http://csny.xyz/
-// @match https://forums.azcwr.org/recent
-// @match https://forums.azcwr.org/unread
+// @match https://forums.azcwr.org/*
 // @grant none
 // ==/UserScript==
 // This script takes a list of users and removes their posts from view 
-
-function force_hashchange(oldLoc) {
-  newLoc = window.location.href.replace(window.location.pathname,"");
-  newLoc = newLoc.replace("https://","");
-  newLoc = newLoc.replace(window.location.hostname,"");
-  if(oldLoc && newLoc != oldLoc){
-    window.location.hash = newLoc;
-  }
-  return newLoc;
-}
-
-var initLoc = force_hashchange();
-window.addEventListener("click", function() {
-  initLoc = force_hashchange(initLoc);
-});
 
 window.addEventListener("load", function() { 
   //Add users to filter here
@@ -41,6 +25,26 @@ window.addEventListener("load", function() {
     "buttonClass" : "btn btn-primary",       //the class used to match the button style
     "buttonPlace" : "btn-toolbar"           //the ID or class[0] where to place the button
   }
+  
+  //use other window.location strings to force a hashchange
+  //since window.location.hash remains blank while navigating the site.
+  function force_hashchange(oldLoc) {
+    var path = window.location.pathname;
+    newLoc = window.location.href.replace(path,"");
+    newLoc = newLoc.replace("https://","");
+    newLoc = newLoc.replace(window.location.hostname,"");
+    if(oldLoc && newLoc != oldLoc){
+      window.location.hash = newLoc;
+    }
+    return newLoc;
+  }
+
+  //set the current page to watch for page changes
+  var initLoc = force_hashchange();
+  window.addEventListener("click", function() {
+    initLoc = force_hashchange(initLoc);
+      console.log("hi");
+  });
   
   //return a node list
   //return a node list with one element if nodelist is empty
@@ -96,9 +100,9 @@ window.addEventListener("load", function() {
     var element = document.getElementById(toPlace);
     if(element == null) {
       element = document.getElementsByClassName(toPlace)[0];
-      if(elements == null) {
-        console.log("identity not found - adding button to <body>");
-        element = document.getElementByTagName("body");
+      if(element == null) {
+        console.log(toPlace + " not found");
+        element = document.getElementsByClassName(button.className)[0].parentNode;
       }
     }
     element.appendChild(button);
@@ -164,7 +168,7 @@ window.addEventListener("load", function() {
   
   //filter or unfilter on click
   var filtered = false;
-  placedButton.addEventListener("click", function _listener() {
+  function _listener() {
     if (filtered){
       //unfilter
       filtered = restorePage(placedButton, originalHTML["str"]); //returns false
@@ -174,5 +178,6 @@ window.addEventListener("load", function() {
       //filter
       filtered = filterPosts(placedButton, itemNodeList, userList, originalHTML);
     }
-  });
+  };
+  placedButton.addEventListener("click", _listener);
 });
