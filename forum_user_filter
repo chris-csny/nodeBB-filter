@@ -7,6 +7,21 @@
 // ==/UserScript==
 // This script takes a list of users and removes their posts from view 
 
+function force_hashchange(oldLoc) {
+  newLoc = window.location.href.replace(window.location.pathname,"");
+  newLoc = newLoc.replace("https://","");
+  newLoc = newLoc.replace(window.location.hostname,"");
+  if(oldLoc && newLoc != oldLoc){
+    window.location.hash = newLoc;
+  }
+  return newLoc;
+}
+
+var initLoc = force_hashchange();
+window.addEventListener("click", function() {
+  initLoc = force_hashchange(initLoc);
+});
+
 window.addEventListener("load", function() { 
   //Add users to filter here
   var userList = [
@@ -24,7 +39,7 @@ window.addEventListener("load", function() {
     "expandedRelevantClass" : "class='row clearfix category-item'",
     "relevantParentClass" : "topic-list",
     "buttonClass" : "btn btn-primary",       //the class used to match the button style
-    "buttonPlace" : "navbar-header"           //the ID or class[0] where to place the button
+    "buttonPlace" : "btn-toolbar"           //the ID or class[0] where to place the button
   }
   
   //return a node list
@@ -137,20 +152,27 @@ window.addEventListener("load", function() {
   //Add the button
   var filterButton = buildButton("filterButton", elements["buttonClass"], "Filter");
   var placedButton = addButton(filterButton, elements["buttonPlace"]);
+
+  window.addEventListener("hashchange", function() { 
+    itemNodeList = getItemNodeList();
+    originalHTML = backupHTML(itemNodeList);
+    filterButton = buildButton(filterButton, elements["buttonClass"], "Filter");
+    placedButton = addButton(filterButton, elements["buttonPlace"]);
+    initLoc = force_hashchange();
+    filtered = false;
+  });
   
   //filter or unfilter on click
   var filtered = false;
   placedButton.addEventListener("click", function _listener() {
-  if (filtered){
-    //unfilter
-    if (originalHTML["url"] == window.location.href){
+    if (filtered){
+      //unfilter
       filtered = restorePage(placedButton, originalHTML["str"]); //returns false
+      itemNodeList = getItemNodeList();
+      originalHTML = backupHTML(itemNodeList);
+    } else {
+      //filter
+      filtered = filterPosts(placedButton, itemNodeList, userList, originalHTML);
     }
-    itemNodeList = getItemNodeList();
-    originalHTML = backupHTML(itemNodeList);
-  } else {
-    //filter
-    filtered = filterPosts(placedButton, itemNodeList, userList, originalHTML);
-  }
   });
 });
