@@ -33,6 +33,9 @@ window.addEventListener("load", function() {
     newLoc = window.location.href.replace(path,"");
     newLoc = newLoc.replace("https://","");
     newLoc = newLoc.replace(window.location.hostname,"");
+    if(newLoc == ""){
+      newLoc = Math.random().toString();
+    }
     if(oldLoc && newLoc != oldLoc){
       window.location.hash = newLoc;
     }
@@ -43,7 +46,6 @@ window.addEventListener("load", function() {
   var initLoc = force_hashchange();
   window.addEventListener("click", function() {
     initLoc = force_hashchange(initLoc);
-      console.log("hi");
   });
   
   //return a node list
@@ -65,11 +67,17 @@ window.addEventListener("load", function() {
   //array["num"] = number of posts in the nodelist
   //array["str"] = the string equivalent HTML of the nodelist
   function backupHTML(nodeList){
-    return {
+    if(nodeList[0]){
+      return {
       "num" : nodeList.length,
       "str" : nodeList[0].parentNode.innerHTML,
       "url" : window.location.href
-    };
+      }; 
+    } return {
+      "num" : 0,
+      "str" : "Nothing Here.",
+      "url" : window.location.href
+    }
   }
   
   //Arguments
@@ -98,11 +106,17 @@ window.addEventListener("load", function() {
   //the given placeID does not exist as an id on the page 
   function addButton(button, toPlace) {
     var element = document.getElementById(toPlace);
-    if(element == null) {
+    if(!element) {
       element = document.getElementsByClassName(toPlace)[0];
-      if(element == null) {
+      if(!element) {
         console.log(toPlace + " not found");
-        element = document.getElementsByClassName(button.className)[0].parentNode;
+        element = document.getElementsByClassName(button.className)[0]
+        if(!element){
+          console.log("give up");
+          return button;
+        } else {
+          element = document.getElementsByClassName(button.className)[0].parentNode;
+        }
       }
     }
     element.appendChild(button);
